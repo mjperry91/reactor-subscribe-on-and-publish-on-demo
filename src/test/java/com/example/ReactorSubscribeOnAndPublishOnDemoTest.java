@@ -54,7 +54,7 @@ class ReactorSubscribeOnAndPublishOnDemoTest {
             .verifyComplete();
   }
 
-  // The publishOn will only have an affect downstream. The upstream operations
+  // The publishOn will only have an effect downstream. The upstream operations
   // before it will be executed on the initial subscribing test thread.
   @Test
   void onePublishOn(){
