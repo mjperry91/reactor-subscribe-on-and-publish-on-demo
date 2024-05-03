@@ -54,8 +54,9 @@ class ReactorSubscribeOnAndPublishOnDemoTest {
             .verifyComplete();
   }
 
-  // When flatMapping a Mono/Flux into the reactive chain it will take affect unlike what we saw above,
-  // where the second subscribeOn did nothing.
+  // When flatMapping a Mono/Flux into the reactive chain with a subscribeOn
+  // it will take effect unlike what we saw above where the second subscribeOn
+  // did nothing.
   @Test
   void nestedSubscribeOns(){
     Flux<Integer> flux = Flux.range(1, 4)
