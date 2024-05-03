@@ -17,7 +17,6 @@ dependencies {
     annotationProcessor ("io.micronaut:micronaut-inject-java")
     annotationProcessor("io.micronaut:micronaut-http-validation")
     annotationProcessor("io.micronaut.serde:micronaut-serde-processor")
-    implementation("org.slf4j:slf4j-api:2.0.12")
     implementation("io.micrometer:context-propagation")
     implementation("io.micronaut:micronaut-http-client")
     implementation("io.micronaut.reactor:micronaut-reactor")

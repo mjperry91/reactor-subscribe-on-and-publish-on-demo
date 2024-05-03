@@ -54,6 +54,26 @@ class ReactorSubscribeOnAndPublishOnDemoTest {
             .verifyComplete();
   }
 
+  // When flatMapping a Mono/Flux into the reactive chain it will take affect unlike what we saw above,
+  // where the second subscribeOn did nothing.
+  @Test
+  void nestedSubscribeOns(){
+    Flux<Integer> flux = Flux.range(1, 4)
+            .subscribeOn(Schedulers.single())
+            .map(i -> {
+              System.out.println("Map 1 = Number " + i + " on Thread " + Thread.currentThread().getName());
+              return i;
+            })
+            .flatMap(i -> Mono.just(i)
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .doOnNext(x -> System.out.println("Map 2 = Number " + i + " on Thread " + Thread.currentThread().getName())));
+
+    StepVerifier.create(flux)
+            .expectSubscription()
+            .expectNextCount(4)
+            .verifyComplete();
+  }
+
   // The publishOn will only have an effect downstream. The upstream operations
   // before it will be executed on the initial subscribing test thread.
   @Test
@@ -121,10 +141,15 @@ class ReactorSubscribeOnAndPublishOnDemoTest {
   }
 
   // The publishOn affects everything downstream, and in this case
-  // the subscribeOn has NO effect.
+  // the subscribeOn has NO effect after the publishOn, but it does
+  // affect the initial map.
   @Test
   void initial_publishOn_then_subscribeOn(){
     Flux<Integer> flux = Flux.range(1, 4)
+            .map(i -> {
+              System.out.println("Map 1 = Number " + i + " on Thread " + Thread.currentThread().getName());
+              return i;
+            })
             .publishOn(Schedulers.single())
             .map(i -> {
               System.out.println("Map 1 = Number " + i + " on Thread " + Thread.currentThread().getName());
@@ -203,6 +228,54 @@ class ReactorSubscribeOnAndPublishOnDemoTest {
               System.out.println("Map is on Thread " + Thread.currentThread().getName());
               return s;
             });
+
+    StepVerifier.create(mono)
+            .expectSubscription()
+            .expectNext("done")
+            .verifyComplete();
+  }
+
+  // publishOn affects everything downstream, but ALSO the callable as there is a special case with
+  // publish on if a callable is passed to it from directly upstream in the chain. SubscribeOn
+  // has NO effect here.
+  @Test
+  void publishOn_after_callable_then_subscribeOn(){
+
+    Mono<String> mono = Mono.fromCallable(() -> {
+              System.out.println("Callable is on Thread " + Thread.currentThread().getName());
+              return "done";
+            })
+            .publishOn(Schedulers.single())
+            .map(s -> {
+              System.out.println("Map 2 is on Thread " + Thread.currentThread().getName());
+              return s;
+            }).subscribeOn(Schedulers.boundedElastic());
+
+    StepVerifier.create(mono)
+            .expectSubscription()
+            .expectNext("done")
+            .verifyComplete();
+  }
+
+  // Since publishOn is not directly after the callable it will not affect the callable, or
+  // anything else upstream. In this case publishOn only affects downstream as is typical,
+  // but the subscribeOn now affects the upstream callable and map.
+  @Test
+  void publishOn_after_callable_and_map_then_subscribeOn(){
+
+    Mono<String> mono = Mono.fromCallable(() -> {
+              System.out.println("Callable is on Thread " + Thread.currentThread().getName());
+              return "done";
+            })
+            .map(s -> {
+              System.out.println("Map 2 is on Thread " + Thread.currentThread().getName());
+              return s;
+            })
+            .publishOn(Schedulers.single())
+            .map(s -> {
+              System.out.println("Map 2 is on Thread " + Thread.currentThread().getName());
+              return s;
+            }).subscribeOn(Schedulers.boundedElastic());
 
     StepVerifier.create(mono)
             .expectSubscription()
